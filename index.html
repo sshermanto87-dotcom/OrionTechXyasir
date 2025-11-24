@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ORION TECH DATABASE</title>
+  <style>
+    :root{
+      --bg:#020204; --panel:rgba(0,0,0,0.6); --neon:#1bff7a; --muted:#6b6b6b;
+      --accent:#0ff0a0; --mono:"Courier New",monospace; --glass:rgba(255,255,255,0.03);
+      --card-bg:rgba(0,0,0,0.45);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--neon);font-family:var(--mono)}
+    .terminal{max-width:1200px;margin:20px auto;padding:18px;border-radius:10px;
+              background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.55));
+              box-shadow:0 8px 60px rgba(0,0,0,0.7),0 0 24px rgba(0,255,150,0.02) inset;
+              border:1px solid rgba(0,255,150,0.06)}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px}
+    .title{font-weight:700;color:var(--accent);font-size:0.95rem}
+    .top-actions{display:flex;gap:10px;align-items:center}
+    .btn{background:transparent;border:1px solid rgba(27,255,122,0.12);color:var(--neon);padding:8px 14px;border-radius:6px;cursor:pointer;letter-spacing:1px;font-weight:700;transition:all 160ms ease}
+    .btn:hover{box-shadow:0 0 18px rgba(27,255,122,0.06);transform:translateY(-2px)}
+    .btn.ghost{border-color:rgba(255,255,255,0.04);color:var(--accent)}
+    .screen{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
+    .console{background:var(--panel);padding:12px;min-height:160px;border-radius:6px;border:1px solid rgba(0,255,150,0.03);overflow:auto;max-height:360px;height:360px}
+    .console-line{color:var(--neon);font-size:0.95rem;margin:6px 0;white-space:pre-wrap}
+    .kbd{background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;color:var(--accent);border:1px solid rgba(15,255,150,0.08)}
+    .hack-form{display:flex;flex-direction:column;gap:8px;background:var(--glass);padding:12px;border-radius:6px}
+    .hack-form.hidden{display:none}
+    .hack-form label{font-size:0.86rem;color:var(--muted)}
+    .hack-form input,.hack-form select{padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--neon);font-family:var(--mono)}
+    .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:999;padding:20px}
+    .progress-center{width:min(780px,95%);background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.75));border-radius:12px;padding:22px;border:1px solid rgba(0,255,150,0.04);box-shadow:0 16px 60px rgba(0,0,0,0.8),0 0 30px rgba(0,255,150,0.02) inset;text-align:center}
+    .progress-title{color:var(--accent);font-weight:800;margin-bottom:12px;font-size:1.05rem}
+    .progress-bar-large{height:22px;background:rgba(255,255,255,0.02);border-radius:12px;overflow:hidden;border:1px solid rgba(0,255,150,0.02)}
+    .big-fill{height:100%;width:0%;background:linear-gradient(90deg, rgba(27,255,122,0.15), rgba(27,255,122,0.95));box-shadow:0 0 18px rgba(27,255,122,0.12) inset;transition:width 120ms linear}
+    .big-percent{margin-top:10px;color:var(--neon);font-weight:900}
+    .result{margin-top:12px;display:flex;gap:12px;align-items:center;justify-content:center}
+    .result .copied{font-weight:900;font-size:1.05rem;color:var(--accent);text-shadow:0 0 8px rgba(0,255,150,0.08)}
+    .hidden{display:none}
+    .data-table{margin-top:18px;background:rgba(0,0,0,0.45);padding:12px;border-radius:8px;border:1px solid rgba(0,255,150,0.03)}
+    .data-table .view-controls{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+    .toggle-btn{padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;background:transparent;color:var(--neon);font-weight:700}
+    table{width:100%;border-collapse:collapse;color:var(--neon);font-size:0.92rem}
+    thead th{text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.02);color:var(--accent);font-size:0.9rem}
+    tbody td{padding:8px;border-bottom:1px dashed rgba(255,255,255,0.02);vertical-align:top}
+    .note{margin-top:8px;color:var(--muted);font-size:0.85rem}
+    .cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    .card{background:var(--card-bg);padding:12px;border-radius:10px;border:1px solid rgba(0,255,150,0.03);display:flex;gap:10px;align-items:flex-start}
+    .avatar{width:64px;height:64px;border-radius:8px;flex-shrink:0;background:#222;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.02)}
+    .card-body{flex:1}
+    .card h3{margin:0;font-size:0.95rem;color:var(--accent)}
+    .meta{font-size:0.82rem;color:var(--muted);margin-bottom:6px}
+    .field{font-size:0.86rem;margin:2px 0}
+    .money{color:#b3ffce;font-weight:800}
+    @media(max-width:880px){.screen{grid-template-columns:1fr}.console{height:260px;max-height:260px}}
+    .spin{display:inline-block;width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.06);border-top-color:var(--neon);animation:spin 700ms linear infinite;vertical-align:middle;margin-left:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <main class="terminal">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="title">Data to be sent to Shanghai</div>
+
+      <div class="top-actions">
+        <button id="startBtn" class="btn">INITIATE</button>
+        <button id="copyTopBtn" class="btn">COPY DATA</button>
+        <button id="downloadBtn" class="btn ghost">DOWNLOAD JSON</button>
+        <div style="margin:12px 0;">
+  <input type="text" id="searchInput" placeholder="Search by name, email, or job..." style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--neon);font-family:var(--mono)">
+</div>
+
+      </div>
+    </div>
+
+    <!-- SCREEN -->
+    <section class="screen">
+
+      <!-- KONSOLE -->
+      <div id="console" class="console" aria-live="polite">
+        <div class="console-line">> system ready. press <span class="kbd">INITIATE</span> or <span class="kbd">COPY DATA</span>.</div>
+      </div>
+
+      <!-- FORM AWAL (pura-pura) -->
+      <form id="hackForm" class="hack-form hidden" onsubmit="return false;">
+        <h2>Authorization Required</h2>
+        <label>Access Key</label>
+        <input type="text" id="accessKey" required placeholder="Enter Key...">
+        <label>Target ID</label>
+        <input type="text" id="targetId" required placeholder="Target Username...">
+        <label>Level</label>
+        <select id="level" required>
+          <option value="">Select Level</option>
+          <option value="root">Root</option>
+          <option value="superuser">Superuser</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button id="startHackBtn" type="button" class="btn">START HACK</button>
+      </form>
+
+    </section>
+
+    <!-- DATASET -->
+    <section class="data-table" id="dataSection">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>Database OrionTech</h2>
+        <div class="view-controls">
+          <button id="tableViewBtn" class="toggle-btn">TABLE VIEW</button>
+          <button id="cardViewBtn" class="toggle-btn">CARD VIEW</button>
+        </div>
+      </div>
+
+      <!-- Table view -->
+      <div id="tableWrapper">
+        <table id="peopleTable">
+          <thead>
+            <tr>
+              <th>#</th><th>Nama</th><th>Tanggal Lahir</th><th>Agama</th><th>Kewarganegaraan</th>
+              <th>No. HP</th><th>Email</th><th>Perkiraan Uang</th><th>No. Rekening</th>
+              <th>Pendidikan</th><th>Pekerjaan</th><th>Alamat</th>
+            </tr>
+          </thead>
+          <tbody id="peopleTbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Card view -->
+      <div id="cardWrapper" class="hidden" style="margin-top:12px">
+        <div id="cardsGrid" class="cards-grid"></div>
+      </div>
+
+      <p class="note">DATA.</p>
+    </section>
+  </main>
+
+  <!-- Overlay progress -->
+  <div id="overlay" class="overlay hidden" aria-hidden="true">
+    <div class="progress-center" role="dialog" aria-modal="true" aria-label="Progress Dialog">
+      <div class="progress-title" id="progressTitle">Running operation...</div>
+      <div class="progress-bar-large" aria-hidden="true">
+        <div id="bigFill" class="big-fill"></div>
+      </div>
+      <div id="bigPercent" class="big-percent">0%</div>
+
+      <div class="result hidden" id="overlayResult" style="margin-top:14px;">
+        <div class="copied">DATA HAS BEEN COPIED</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    
+  (function(){
+    /* ========== Dataset: 50 orang (fiktif) ========== */
+    const dataset = [
+      {id:1,nama:"Ari Pratama",tanggalLahir:"1996-01-12",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0812-3344-0001",email:"ari.pratama@example.com",uang:{min:15000000,max:200000000,display:"Rp 87.000.000"},norek:"0021-33445566 (BCA)",pendidikan:"S1 Teknik Informatika - Universitas Indonesia",pekerjaan:"System Analyst di perusahaan swasta",alamat:"Jakarta"},
+      {id:2,nama:"Dina Safira",tanggalLahir:"1998-05-04",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0821-7788-0002",email:"dina.safira@example.com",uang:{min:15000000,max:200000000,display:"Rp 152.000.000"},norek:"9944-22110033 (Mandiri)",pendidikan:"S1 Ilmu Komunikasi - Universitas Gadjah Mada",pekerjaan:"Staf Humas di Kementerian",alamat:"Bandung"},
+      {id:3,nama:"Budi Santoso",tanggalLahir:"1994-10-21",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0813-5566-0003",email:"budi.santoso@example.com",uang:{min:15000000,max:200000000,display:"Rp 45.000.000"},norek:"7788-66554433 (BRI)",pendidikan:"S1 Teknik Pertambangan - Institut Teknologi Bandung",pekerjaan:"Supervisor Lapangan Tambang",alamat:"Surabaya"},
+      {id:4,nama:"Rina Marlina",tanggalLahir:"1995-08-07",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0896-1122-0004",email:"rina.marlina@example.com",uang:{min:15000000,max:200000000,display:"Rp 190.000.000"},norek:"1122334455 (BNI)",pendidikan:"S1 Akuntansi - Universitas Airlangga",pekerjaan:"Analis Keuangan",alamat:"Medan"},
+      {id:5,nama:"Fajar Nugraha",tanggalLahir:"1997-02-03",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0838-5522-0005",email:"fajar.nugraha@example.com",uang:{min:15000000,max:200000000,display:"Rp 131.000.000"},norek:"6677889900 (CIMB Niaga)",pendidikan:"S1 Administrasi Publik - Universitas Padjadjaran",pekerjaan:"Pegawai Pemerintahan",alamat:"Semarang"},
+      {id:6,nama:"Siti Khairun",tanggalLahir:"1999-11-20",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0819-2233-0006",email:"siti.khairun@example.com",uang:{min:15000000,max:200000000,display:"Rp 63.000.000"},norek:"5544332211 (BCA)",pendidikan:"S1 Psikologi - Universitas Indonesia",pekerjaan:"HR di perusahaan konsultan",alamat:"Yogyakarta"},
+      {id:7,nama:"Agus Hadi",tanggalLahir:"1992-07-14",agama:"Kristen",kewarganegaraan:"Indonesia",telepon:"0822-5566-0007",email:"agus.hadi@example.com",uang:{min:15000000,max:200000000,display:"Rp 25.000.000"},norek:"2211003344 (BRI)",pendidikan:"S1 Manajemen - Universitas Indonesia",pekerjaan:"Manajer Perkantoran",alamat:"Bekasi"},
+      {id:8,nama:"Wulan Permata",tanggalLahir:"1993-04-18",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0823-6677-0008",email:"wulan.permata@example.com",uang:{min:15000000,max:200000000,display:"Rp 18.000.000"},norek:"3344556677 (Mandiri)",pendidikan:"S1 DKV - Institut Teknologi Bandung",pekerjaan:"Public Relation di agensi kreatif",alamat:"Depok"},
+      {id:9,nama:"Rizky Adi",tanggalLahir:"1990-12-09",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0814-9988-0009",email:"rizky.adi@example.com",uang:{min:15000000,max:200000000,display:"Rp 76.000.000"},norek:"8899001122 (CIMB Niaga)",pendidikan:"S1 Teknik Elektro - Universitas Indonesia",pekerjaan:"Engineer di perusahaan energi",alamat:"Malang"},
+      {id:10,nama:"Indah Laras",tanggalLahir:"1996-06-30",agama:"Kristen",kewarganegaraan:"Indonesia",telepon:"0821-4455-0010",email:"indah.laras@example.com",uang:{min:15000000,max:200000000,display:"Rp 200.000.000"},norek:"1010101010 (BNI)",pendidikan:"S1 Hukum - Universitas Indonesia",pekerjaan:"Konsultan Hukum",alamat:"Palembang"},
+
+      {id:11,nama:"Hendra Wijaya",tanggalLahir:"1991-03-11",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0812-4455-0011",email:"hendra.w@example.com",uang:{min:15000000,max:200000000,display:"Rp 34.000.000"},norek:"2233445566 (BCA)",pendidikan:"S1 Teknik Sipil - Institut Teknologi Sepuluh Nopember",pekerjaan:"Site Engineer",alamat:"Makassar"},
+      {id:12,nama:"Maya Sari",tanggalLahir:"1995-09-22",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0822-3344-0012",email:"maya.sari@example.com",uang:{min:15000000,max:200000000,display:"Rp 58.000.000"},norek:"3344221100 (Mandiri)",pendidikan:"S1 Farmasi - Universitas Padjadjaran",pekerjaan:"Apoteker",alamat:"Bandung"},
+      {id:13,nama:"Rendy Kurnia",tanggalLahir:"1989-02-14",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0813-9988-0013",email:"rendy.k@example.com",uang:{min:15000000,max:200000000,display:"Rp 120.000.000"},norek:"5566778899 (BRI)",pendidikan:"S1 Ekonomi - Universitas Gadjah Mada",pekerjaan:"Analis Investasi",alamat:"Yogyakarta"},
+      {id:14,nama:"Putri Anindita",tanggalLahir:"1997-12-01",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0831-4455-0014",email:"putri.anindita@example.com",uang:{min:15000000,max:200000000,display:"Rp 20.000.000"},norek:"6677001122 (CIMB Niaga)",pendidikan:"S1 Desain Produk - Institut Teknologi Bandung",pekerjaan:"Desainer Produk",alamat:"Bogor"},
+      {id:15,nama:"Gilang Ramadhan",tanggalLahir:"1990-05-19",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0815-3344-0015",email:"gilang.r@example.com",uang:{min:15000000,max:200000000,display:"Rp 98.000.000"},norek:"8899112233 (BNI)",pendidikan:"S1 Teknik Mesin - Universitas Indonesia",pekerjaan:"Maintenance Engineer",alamat:"Tangerang"},
+      {id:16,nama:"Nadia Putri",tanggalLahir:"1998-07-06",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0823-7788-0016",email:"nadia.putri@example.com",uang:{min:15000000,max:200000000,display:"Rp 46.000.000"},norek:"4455667788 (Mandiri)",pendidikan:"S1 Ilmu Komunikasi - Universitas Airlangga",pekerjaan:"Content Strategist",alamat:"Surabaya"},
+      {id:17,nama:"Dedi Saputra",tanggalLahir:"1988-11-30",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0812-1122-0017",email:"dedi.saputra@example.com",uang:{min:15000000,max:200000000,display:"Rp 160.000.000"},norek:"1122446688 (BCA)",pendidikan:"S1 Teknik Elektro - Institut Teknologi Bandung",pekerjaan:"Project Manager",alamat:"Semarang"},
+      {id:18,nama:"Elisa Mariana",tanggalLahir:"1994-04-27",agama:"Kristen",kewarganegaraan:"Indonesia",telepon:"0821-6677-0018",email:"elisa.m@example.com",uang:{min:15000000,max:200000000,display:"Rp 29.000.000"},norek:"9988776655 (BRI)",pendidikan:"S1 Psikologi - Universitas Indonesia",pekerjaan:"Konselor",alamat:"Denpasar"},
+      {id:19,nama:"Rian Saputra",tanggalLahir:"1993-06-15",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0814-5566-0019",email:"rian.saputra@example.com",uang:{min:15000000,max:200000000,display:"Rp 72.000.000"},norek:"3344778899 (Mandiri)",pendidikan:"S1 Teknik Informatika - Universitas Diponegoro",pekerjaan:"Fullstack Developer",alamat:"Semarang"},
+      {id:20,nama:"Sofia Rahma",tanggalLahir:"1996-10-03",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0822-4455-0020",email:"sofia.rahma@example.com",uang:{min:15000000,max:200000000,display:"Rp 110.000.000"},norek:"2211334455 (CIMB Niaga)",pendidikan:"S1 Hukum - Universitas Gadjah Mada",pekerjaan:"Legal Officer",alamat:"Malang"},
+
+      {id:21,nama:"Yusuf Hidayat",tanggalLahir:"1987-01-23",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0813-3344-0021",email:"yusuf.h@example.com",uang:{min:15000000,max:200000000,display:"Rp 150.000.000"},norek:"5566443322 (BCA)",pendidikan:"S1 Teknik Kimia - Institut Teknologi Bandung",pekerjaan:"Chemist",alamat:"Bandung"},
+      {id:22,nama:"Linda Marlina",tanggalLahir:"1992-09-09",agama:"Kristen",kewarganegaraan:"Indonesia",telepon:"0821-9988-0022",email:"linda.marlina@example.com",uang:{min:15000000,max:200000000,display:"Rp 38.000.000"},norek:"1100223344 (BNI)",pendidikan:"S1 Akuntansi - Universitas Airlangga",pekerjaan:"Senior Accountant",alamat:"Medan"},
+      {id:23,nama:"Teguh Prasetyo",tanggalLahir:"1990-12-28",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0838-3344-0023",email:"teguh.p@example.com",uang:{min:15000000,max:200000000,display:"Rp 26.000.000"},norek:"6677223344 (BRI)",pendidikan:"S1 Pertanian - Institut Pertanian Bogor",pekerjaan:"Agronomy Officer",alamat:"Bogor"},
+      {id:24,nama:"Intan Larasati",tanggalLahir:"1999-03-17",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0812-6677-0024",email:"intan.l@example.com",uang:{min:15000000,max:200000000,display:"Rp 21.000.000"},norek:"7788110099 (Mandiri)",pendidikan:"S1 Bahasa & Sastra - Universitas Padjadjaran",pekerjaan:"Editor",alamat:"Yogyakarta"},
+      {id:25,nama:"Zulkifli",tanggalLahir:"1985-05-05",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0823-1122-0025",email:"zulkifli@example.com",uang:{min:15000000,max:200000000,display:"Rp 175.000.000"},norek:"3344005566 (CIMB Niaga)",pendidikan:"S1 Ekonomi - Universitas Indonesia",pekerjaan:"Direktur Operasional",alamat:"Jakarta"},
+      {id:26,nama:"Nina Oktaviani",tanggalLahir:"1996-08-21",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0819-4455-0026",email:"nina.o@example.com",uang:{min:15000000,max:200000000,display:"Rp 49.000.000"},norek:"9900112233 (BNI)",pendidikan:"S1 Desain Komunikasi Visual - Institut Teknologi Bandung",pekerjaan:"Art Director",alamat:"Bandung"},
+      {id:27,nama:"Fikriansyah",tanggalLahir:"1991-11-11",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0822-3344-0027",email:"fikri.ansyah@example.com",uang:{min:15000000,max:200000000,display:"Rp 68.000.000"},norek:"5566881122 (BCA)",pendidikan:"S1 Teknik Informatika - Universitas Gadjah Mada",pekerjaan:"DevOps Engineer",alamat:"Yogyakarta"},
+      {id:28,nama:"Meli Kusuma",tanggalLahir:"1994-02-02",agama:"Kristen",kewarganegaraan:"Indonesia",telepon:"0831-5566-0028",email:"meli.kusuma@example.com",uang:{min:15000000,max:200000000,display:"Rp 32.000.000"},norek:"1122773344 (BRI)",pendidikan:"S1 Manajemen - Universitas Indonesia",pekerjaan:"Event Manager",alamat:"Surabaya"},
+      {id:29,nama:"Kevin Adrian",tanggalLahir:"1993-07-25",agama:"Kristen",kewarganegaraan:"Indonesia",telepon:"0814-2233-0029",email:"kevin.adrian@example.com",uang:{min:15000000,max:200000000,display:"Rp 54.000.000"},norek:"3344112277 (Mandiri)",pendidikan:"S1 Teknik Elektro - Institut Teknologi Bandung",pekerjaan:"Teknisi Jaringan",alamat:"Bekasi"},
+      {id:30,nama:"Sari Dewi",tanggalLahir:"1997-01-05",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0821-3344-0030",email:"sari.dewi@example.com",uang:{min:15000000,max:200000000,display:"Rp 44.000.000"},norek:"2233114455 (CIMB Niaga)",pendidikan:"S1 Gizi - Universitas Airlangga",pekerjaan:"Nutritionist",alamat:"Malang"},
+
+      {id:31,nama:"Aditya Pranata",tanggalLahir:"1992-04-12",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0812-7788-0031",email:"aditya.pranata@example.com",uang:{min:15000000,max:200000000,display:"Rp 95.000.000"},norek:"6677112233 (BCA)",pendidikan:"S1 Teknik Industri - Institut Teknologi Bandung",pekerjaan:"Process Engineer",alamat:"Bandung"},
+      {id:32,nama:"Raisa Putri",tanggalLahir:"1998-09-29",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0823-4455-0032",email:"raisa.putri@example.com",uang:{min:15000000,max:200000000,display:"Rp 19.000.000"},norek:"4455778899 (Mandiri)",pendidikan:"S1 Desain Interior - Universitas Pelita Harapan",pekerjaan:"Interior Designer",alamat:"Tangerang"},
+      {id:33,nama:"Wibowo",tanggalLahir:"1986-06-06",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0813-6677-0033",email:"wibowo@example.com",uang:{min:15000000,max:200000000,display:"Rp 140.000.000"},norek:"1122337788 (BNI)",pendidikan:"S1 Teknik Elektro - Universitas Indonesia",pekerjaan:"Senior Engineer",alamat:"Jakarta"},
+      {id:34,nama:"Mega Pratiwi",tanggalLahir:"1995-10-10",agama:"Kristen",kewarganegaraan:"Indonesia",telepon:"0838-1122-0034",email:"mega.pratiwi@example.com",uang:{min:15000000,max:200000000,display:"Rp 27.000.000"},norek:"5566991122 (BRI)",pendidikan:"S1 Ilmu Komunikasi - Universitas Padjadjaran",pekerjaan:"Social Media Manager",alamat:"Depok"},
+      {id:35,nama:"Christian Nugraha",tanggalLahir:"1990-02-18",agama:"Kristen",kewarganegaraan:"Indonesia",telepon:"0821-5566-0035",email:"christian.n@example.com",uang:{min:15000000,max:200000000,display:"Rp 83.000.000"},norek:"8899221133 (CIMB Niaga)",pendidikan:"S1 Sistem Informasi - Universitas Bina Nusantara",pekerjaan:"IT Consultant",alamat:"Jakarta"},
+      {id:36,nama:"Fitriani",tanggalLahir:"1997-03-03",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0819-3344-0036",email:"fitriani@example.com",uang:{min:15000000,max:200000000,display:"Rp 23.000.000"},norek:"3344559900 (Mandiri)",pendidikan:"S1 Keperawatan - Universitas Padjadjaran",pekerjaan:"Perawat",alamat:"Bekasi"},
+      {id:37,nama:"Riko Hartono",tanggalLahir:"1991-08-08",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0822-7788-0037",email:"riko.h@example.com",uang:{min:15000000,max:200000000,display:"Rp 129.000.000"},norek:"6677990011 (BCA)",pendidikan:"S1 Teknik Komputer - Institut Teknologi Sepuluh Nopember",pekerjaan:"Hardware Engineer",alamat:"Surabaya"},
+      {id:38,nama:"Amelia S",tanggalLahir:"1994-11-11",agama:"Kristen",kewarganegaraan:"Indonesia",telepon:"0814-1122-0038",email:"amelia.s@example.com",uang:{min:15000000,max:200000000,display:"Rp 55.000.000"},norek:"2233554466 (BRI)",pendidikan:"S1 Psikologi - Universitas Gadjah Mada",pekerjaan:"HR Specialist",alamat:"Yogyakarta"},
+      {id:39,nama:"Galih Pramana",tanggalLahir:"1989-07-07",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0831-6677-0039",email:"galih.pramana@example.com",uang:{min:15000000,max:200000000,display:"Rp 71.000.000"},norek:"1122443355 (Mandiri)",pendidikan:"S1 Teknik Mesin - Universitas Diponegoro",pekerjaan:"Mechanical Engineer",alamat:"Semarang"},
+      {id:40,nama:"Melinda",tanggalLahir:"1996-12-12",agama:"Kristen",kewarganegaraan:"Indonesia",telepon:"0823-3344-0040",email:"melinda@example.com",uang:{min:15000000,max:200000000,display:"Rp 36.000.000"},norek:"3344889900 (CIMB Niaga)",pendidikan:"S1 Psikologi - Universitas Indonesia",pekerjaan:"Research Assistant",alamat:"Denpasar"},
+
+      {id:41,nama:"Yogi Pratama",tanggalLahir:"1993-05-05",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0812-3344-0041",email:"yogi.pratama@example.com",uang:{min:15000000,max:200000000,display:"Rp 59.000.000"},norek:"5566770011 (BCA)",pendidikan:"S1 Teknik Informatika - Universitas Islam Indonesia",pekerjaan:"QA Engineer",alamat:"Yogyakarta"},
+      {id:42,nama:"Kirana Putri",tanggalLahir:"1998-02-20",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0821-7788-0042",email:"kirana.putri@example.com",uang:{min:15000000,max:200000000,display:"Rp 16.000.000"},norek:"6677441122 (Mandiri)",pendidikan:"S1 Akuntansi - Universitas Padjadjaran",pekerjaan:"Accounting Staff",alamat:"Bandung"},
+      {id:43,nama:"Eko Susilo",tanggalLahir:"1990-09-19",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0813-5566-0043",email:"eko.susilo@example.com",uang:{min:15000000,max:200000000,display:"Rp 102.000.000"},norek:"8899004433 (BRI)",pendidikan:"S1 Teknik Sipil - Institut Teknologi Bandung",pekerjaan:"Konstruksi Manager",alamat:"Makassar"},
+      {id:44,nama:"Nadia Rahmani",tanggalLahir:"1995-04-04",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0896-1122-0044",email:"nadia.rahmani@example.com",uang:{min:15000000,max:200000000,display:"Rp 28.000.000"},norek:"1122330099 (BNI)",pendidikan:"S1 Hukum - Universitas Indonesia",pekerjaan:"Legal Assistant",alamat:"Jakarta"},
+      {id:45,nama:"Bima Santika",tanggalLahir:"1997-06-06",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0838-5522-0045",email:"bima.santika@example.com",uang:{min:15000000,max:200000000,display:"Rp 65.000.000"},norek:"6677882233 (CIMB Niaga)",pendidikan:"S1 Teknik Lingkungan - Institut Teknologi Bandung",pekerjaan:"Environmental Engineer",alamat:"Bandung"},
+      {id:46,nama:"Rika Amelia",tanggalLahir:"1999-10-10",agama:"Kristen",kewarganegaraan:"Indonesia",telepon:"0819-2233-0046",email:"rika.amelia@example.com",uang:{min:15000000,max:200000000,display:"Rp 22.000.000"},norek:"5544339988 (Mandiri)",pendidikan:"S1 Ilmu Komunikasi - Universitas Gadjah Mada",pekerjaan:"PR Executive",alamat:"Surabaya"},
+      {id:47,nama:"Herianto",tanggalLahir:"1988-08-08",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0822-5566-0047",email:"herianto@example.com",uang:{min:15000000,max:200000000,display:"Rp 185.000.000"},norek:"2211883344 (BCA)",pendidikan:"S1 Manajemen - Universitas Indonesia",pekerjaan:"Kepala Cabang Bank",alamat:"Medan"},
+      {id:48,nama:"Citra Anggraini",tanggalLahir:"1993-03-03",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0823-6677-0048",email:"citra.anggraini@example.com",uang:{min:15000000,max:200000000,display:"Rp 31.000.000"},norek:"3344550099 (BRI)",pendidikan:"S1 Desain Komunikasi Visual - Institut Teknologi Bandung",pekerjaan:"Graphic Designer",alamat:"Denpasar"},
+      {id:49,nama:"Rudy Prasetyo",tanggalLahir:"1991-11-13",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0814-9988-0049",email:"rudy.prasetyo@example.com",uang:{min:15000000,max:200000000,display:"Rp 47.000.000"},norek:"8899003344 (Mandiri)",pendidikan:"S1 Teknik Mesin - Universitas Diponegoro",pekerjaan:"Field Engineer",alamat:"Semarang"},
+      {id:50,nama:"Lina Handayani",tanggalLahir:"1994-05-21",agama:"Islam",kewarganegaraan:"Indonesia",telepon:"0821-4455-0050",email:"lina.handayani@example.com",uang:{min:15000000,max:200000000,display:"Rp 14.500.000"},norek:"1011223344 (CIMB Niaga)",pendidikan:"S1 Administrasi Publik - Universitas Padjadjaran",pekerjaan:"Staf Administrasi",alamat:"Malang"}
+    ];
+
+    /* ========== DOM refs ========== */
+    const peopleTbody = document.getElementById('peopleTbody');
+    const cardsGrid = document.getElementById('cardsGrid');
+    const tableWrapper = document.getElementById('tableWrapper');
+    const cardWrapper = document.getElementById('cardWrapper');
+    const tableViewBtn = document.getElementById('tableViewBtn');
+    const cardViewBtn = document.getElementById('cardViewBtn');
+    const copyTopBtn = document.getElementById('copyTopBtn');
+    const consoleEl = document.getElementById('console');
+    const overlay = document.getElementById('overlay');
+    const bigFill = document.getElementById('bigFill');
+    const bigPercent = document.getElementById('bigPercent');
+    const overlayResult = document.getElementById('overlayResult');
+    const progressTitle = document.getElementById('progressTitle');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const startBtn = document.getElementById('startBtn');
+    const hackForm = document.getElementById('hackForm');
+    const startHackBtn = document.getElementById('startHackBtn');
+
+    /* ========== Avatar generator (stable per name) ========== */
+    function avatarDataUrl(name, w=120,h=120){
+      const initials = name.split(' ').slice(0,2).map(s=>s[0]?s[0].toUpperCase():'').join('');
+      const hash = Array.from(name).reduce((acc,c)=>acc + c.charCodeAt(0), 0);
+      const palettes = [['#0ff0a0','#1bff7a'],['#ffd86b','#ff6b6b'],['#8ad2ff','#5aa9ff'],
+                        ['#d6a2ff','#8f6bff'],['#ff9fb8','#ff6b8a'],['#a6ffde','#7af3c4']];
+      const p = palettes[hash % palettes.length];
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>
+        <defs><linearGradient id='g${hash}' x1='0' x2='1' y1='0' y2='1'>
+          <stop offset='0' stop-color='${p[0]}'/><stop offset='1' stop-color='${p[1]}'/>
+        </linearGradient></defs>
+        <rect width='100%' height='100%' rx='12' fill='url(#g${hash})'/>
+        <text x='50%' y='52%' text-anchor='middle' font-family='Courier New, monospace' font-size='44' fill='#001' font-weight='700' dy='.35em'>${initials}</text>
+      </svg>`;
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    }
+
+    /* ========== Render functions ========== */
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    function formatDate(d){
+      if(!d) return '';
+      const parts = d.split('-');
+      if(parts.length !== 3) return d;
+      const months=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+      return `${parseInt(parts[2])} ${months[parseInt(parts[1],10)-1]} ${parts[0]}`;
+    }
+
+    function renderTable(){
+      peopleTbody.innerHTML = '';
+      dataset.forEach(p=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${p.id}</td>
+          <td>${escapeHtml(p.nama)}</td>
+          <td>${formatDate(p.tanggalLahir)}</td>
+          <td>${p.agama}</td>
+          <td>${p.kewarganegaraan}</td>
+          <td>${p.telepon}</td>
+          <td>${p.email}</td>
+          <td class="money">${p.uang.display}</td>
+          <td>${p.norek}</td>
+          <td>${p.pendidikan}</td>
+          <td>${p.pekerjaan}</td>
+          <td>${p.alamat}</td>`;
+        peopleTbody.appendChild(tr);
+      });
+    }
+
+    function renderCards(){
+      cardsGrid.innerHTML = '';
+      dataset.forEach(p=>{
+        const card = document.createElement('div'); card.className='card';
+        const imgUrl = avatarDataUrl(p.nama,120,120);
+        card.innerHTML = `<div class="avatar"><img src="${imgUrl}" alt="avatar ${escapeHtml(p.nama)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px"/></div>
+          <div class="card-body">
+            <h3>${escapeHtml(p.nama)}</h3>
+            <div class="meta">${formatDate(p.tanggalLahir)} · ${p.agama} · ${p.kewarganegaraan}</div>
+            <div class="field"><strong>HP:</strong> ${p.telepon} · <strong>Email:</strong> ${p.email}</div>
+            <div class="field"><strong>Saldo:</strong> <span class="money">${p.uang.display}</span></div>
+            <div class="field"><strong>No. Rek:</strong> ${p.norek}</div>
+            <div class="field"><strong>Pendidikan:</strong> ${p.pendidikan}</div>
+            <div class="field"><strong>Pekerjaan:</strong> ${p.pekerjaan}</div>
+            <div class="field"><strong>Alamat:</strong> ${p.alamat}</div>
+          </div>`;
+        cardsGrid.appendChild(card);
+      });
+    }
+
+    /* ========== Initial render & view switching ========== */
+    renderTable(); renderCards();
+    tableWrapper.classList.remove('hidden'); cardWrapper.classList.add('hidden');
+
+    document.getElementById('tableViewBtn').addEventListener('click', ()=>{
+      tableWrapper.classList.remove('hidden'); cardWrapper.classList.add('hidden'); printConsole('> switched to TABLE VIEW');
+    });
+    document.getElementById('cardViewBtn').addEventListener('click', ()=>{
+      cardWrapper.classList.remove('hidden'); tableWrapper.classList.add('hidden'); printConsole('> switched to CARD VIEW');
+    });
+
+    /* ========== Console print ========== */
+    function printConsole(line){
+      const d = document.createElement('div'); d.className='console-line'; d.textContent = line;
+      consoleEl.appendChild(d); consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    /* ========== Copy progress logic (pauses at 80/90/97/98 -> 4s each) ========== */
+    let percent = 0, intervalId = null, running = false;
+    const pauseTargets = {80:false,90:false,97:false,98:false};
+
+    function startCopySequence(){
+      if(running){ printConsole('> copy already running'); return; }
+      running = true; percent = 0; Object.keys(pauseTargets).forEach(k=>pauseTargets[k]=false);
+      overlay.classList.remove('hidden'); overlay.setAttribute('aria-hidden','false');
+      bigFill.style.width='0%'; bigPercent.textContent='0%'; overlayResult.classList.add('hidden');
+      progressTitle.textContent='Copying dataset...';
+      printConsole('> Initiating dataset copy sequence...'); printConsole('> Serializing records...');
+      intervalId = setInterval(step, 65);
+    }
+
+    function step(){
+      if(percent >= 100) return;
+      percent += 1;
+      bigFill.style.width = percent + '%'; bigPercent.textContent = percent + '%';
+
+      if(percent % 10 === 0) printConsole(`> mirror ${percent}% — streaming packets...`);
+      else if(Math.random() < 0.035) printConsole('> verifying checksums...');
+
+      // pause points: each pause is 4000ms (4s)
+      if(percent === 80 && !pauseTargets[80]) {
+        pauseTargets[80]=true; clearInterval(intervalId);
+        printConsole('> stall detected at 80% — stabilizing (4s)');
+        setTimeout(()=>{ printConsole('> resumed at 80%.'); intervalId = setInterval(step,65); }, 4000);
+        return;
+      }
+      if(percent === 90 && !pauseTargets[90]) {
+        pauseTargets[90]=true; clearInterval(intervalId);
+        printConsole('> heavy IO at 90% — awaiting ACK (4s)');
+        setTimeout(()=>{ printConsole('> ACK received. resuming.'); intervalId = setInterval(step,65); }, 4000);
+        return;
+      }
+      if(percent === 97 && !pauseTargets[97]) {
+        pauseTargets[97]=true; clearInterval(intervalId);
+        printConsole('> finalizing payload (97%) — integrity checks (4s)');
+        setTimeout(()=>{ printConsole('> final checks OK.'); intervalId = setInterval(step,65); }, 4000);
+        return;
+      }
+      if(percent === 98 && !pauseTargets[98]) {
+        pauseTargets[98]=true; clearInterval(intervalId);
+        printConsole('> commit stage reached (98%) — waiting clear (4s)');
+        setTimeout(()=>{ printConsole('> commit accepted. continuing.'); intervalId = setInterval(step,65); }, 4000);
+        return;
+      }
+
+      if(percent >= 100){
+        clearInterval(intervalId);
+        finishCopy();
+      }
+    }
+
+    /* ========== Reliable copy to clipboard with fallback; UI shows success always unless browser forbids entirely ========== */
+    async function copyToClipboardReliable(text){
+      // Try navigator.clipboard first (secure context)
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        try{
+          await navigator.clipboard.writeText(text);
+          return {ok:true,method:'clipboard'};
+        }catch(e){
+          // continue to fallback
+        }
+      }
+      // Fallback: create temporary textarea, select, execCommand
+      try{
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly',''); ta.style.position='absolute'; ta.style.left='-9999px';
+        document.body.appendChild(ta);
+        const sel = document.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(ta);
+        sel.removeAllRanges(); sel.addRange(range);
+        const success = document.execCommand('copy');
+        sel.removeAllRanges();
+        ta.remove();
+        if(success) return {ok:true,method:'execCommand'};
+        return {ok:false,reason:'execCommand failed'};
+      }catch(err){
+        return {ok:false,reason: String(err)};
+      }
+    }
+
+    async function finishCopy(){
+      printConsole('> transfer complete. preparing payload...');
+      setTimeout(async ()=>{
+        const json = JSON.stringify(dataset, null, 2);
+        const res = await copyToClipboardReliable(json);
+        if(res.ok){
+          printConsole('> DATA SUCCESSFULLY COPIED');
+          overlayResult.classList.remove('hidden');
+          progressTitle.textContent='Operation complete';
+          bigFill.style.width='100%'; bigPercent.textContent='100%';
+        } else {
+          // If both methods fail, still offer download as fallback and show clear message
+          printConsole('> COPY FAILED (browser prevented clipboard). Offering download fallback.');
+          overlayResult.classList.remove('hidden');
+          overlayResult.querySelector('.copied').textContent = 'COPY FAILED — DOWNLOAD READY';
+          progressTitle.textContent='Partial complete';
+          bigFill.style.width='100%'; bigPercent.textContent='100%';
+          // prepare automatic download
+          prepareDownloadBlob(json, 'dataset_fiksi.json');
+        }
+        running = false;
+        // hide overlay after short delay
+        setTimeout(()=>{ overlay.classList.add('hidden'); overlay.setAttribute('aria-hidden','true'); }, 1200);
+      }, 300);
+    }
+
+    /* ========== Download helper ========== */
+    function prepareDownloadBlob(text, filename){
+      try{
+        const blob = new Blob([text], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+        a.remove(); URL.revokeObjectURL(url);
+        printConsole('> automatic download started (fallback).');
+      }catch(e){ printConsole('> download fallback failed: '+ e); }
+    }
+
+    /* ========== UI events ========== */
+    copyTopBtn.addEventListener('click', ()=>{
+      // small spinner appended to button for feedback
+      let spinner = copyTopBtn.querySelector('.spin');
+      if(!spinner){
+        spinner = document.createElement('span'); spinner.className='spin'; copyTopBtn.appendChild(spinner);
+      }
+      startCopySequence();
+      // spinner removed after generous timeout (safety)
+      setTimeout(()=>{ if(spinner && spinner.parentNode) spinner.remove(); }, 5000);
+    });
+
+    downloadBtn.addEventListener('click', ()=>{
+      const json = JSON.stringify(dataset, null, 2);
+      prepareDownloadBlob(json, 'dataset_fiksi.json');
+    });
+
+    startBtn.addEventListener('click', ()=>{
+      if(hackForm.classList.contains('hidden')){
+        hackForm.classList.remove('hidden'); printConsole('> authorization form shown.');
+      } else {
+        hackForm.classList.add('hidden'); printConsole('> authorization form hidden.');
+      }
+    });
+
+    startHackBtn.addEventListener('click', ()=>{
+      printConsole('> START HACK (simulated) initiated.');
+      let p=0; const id = setInterval(()=>{ p+=10; printConsole(`> exploit ${p}%`); if(p>=100){ clearInterval(id); printConsole('> exploit completed (simulated).'); } }, 220);
+
+      // optional: trigger copy sequence as part of fake hack
+      // startCopySequence();
+    });
+
+    // ESC to cancel overlay
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape' && !overlay.classList.contains('hidden')){
+        clearInterval(intervalId); running=false;
+        overlay.classList.add('hidden'); overlay.setAttribute('aria-hidden','true');
+        printConsole('> copy sequence cancelled (user).');
+      }
+    });
+
+    /* ========== Initial notes ========== */
+    printConsole('> welcome back, operator.');
+    printConsole('> UI ready — use INITIATE, COPY DATA, or DOWNLOAD JSON.');
+  })();
+  
+  </script>
+  
+</body>
+</html>
